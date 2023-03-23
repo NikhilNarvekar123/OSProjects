@@ -31,7 +31,11 @@ public class Program1 {
     public static Semaphore[] workerCustomerSemaphore = new Semaphore[] {new Semaphore(0, true), new Semaphore(0, true), new Semaphore(0, true)};
     public static Semaphore[] customerWorkerSemaphore = new Semaphore[] {new Semaphore(0, true), new Semaphore(0, true), new Semaphore(0, true)};
 
+    // used to keep track of worker actually working on customer task
+    public static Semaphore[] workerTaskSemaphore = new Semaphore[] {new Semaphore(0, true), new Semaphore(0, true), new Semaphore(0, true)};
 
+    // SCALES - ONLY 1 WORKER CAN USE AT A TIME
+    public static Semaphore scale = new Semaphore(1, true);
 
     // GLOBALS
 
@@ -151,7 +155,32 @@ public class Program1 {
                         break;     
                 }
 
-                while(true){}
+                // let worker start doing task
+                customerWorkerSemaphore[workerID].release();
+
+                // wait for worker to be done with finishing requested task
+                workerTaskSemaphore[workerID].acquire();
+                
+                
+                switch(this.task) {
+                    case BUY_STAMPS:
+                        System.out.println("Customer " + id + " finished buying stamps");
+                        break;
+                    case MAIL_LETTER:
+                        System.out.println("Customer " + id + " finished mailing a letter");
+                        break;
+                    case MAIL_PACKAGE:
+                        System.out.println("Customer " + id + " finished mailing a package");
+                        break;     
+                }
+
+                // CLEANUP CODE
+
+                System.out.println("Customer " + id + " leaves post office");
+                
+                // left PO
+                postOfficeEntry.release();
+
 
             } catch (Exception e) {
                 System.out.println("Thread error " + e);
@@ -197,10 +226,32 @@ public class Program1 {
                     CustomerTask customerTask = workerTasks[this.id];
 
                     // print message and let customer print its message
-                    System.out.println("Postal worker " + id + " serving " + customerID);
+                    System.out.println("Postal worker " + id + " serving customer " + customerID);
                     workerCustomerSemaphore[id].release();
 
-                    while(true) {}
+
+                    // wait for customer to print its message
+                    customerWorkerSemaphore[id].acquire();
+
+                    // delay for task time
+                    switch(customerTask) {
+                        case BUY_STAMPS:
+                            Thread.sleep(timeTable.get(CustomerTask.BUY_STAMPS) * 100);
+                            break;
+                        case MAIL_LETTER:
+                            Thread.sleep(timeTable.get(CustomerTask.MAIL_LETTER) * 100);
+                            break;
+                        case MAIL_PACKAGE:
+                            // acquire scale, wait, then release scale
+                            scale.acquire();
+                            Thread.sleep(timeTable.get(CustomerTask.MAIL_PACKAGE) * 100);
+                            scale.release();
+                            break;
+                    }
+
+                    System.out.println("Postal worker " + this.id + " finished serving customer " + customerID);
+
+                    workerTaskSemaphore[this.id].release();
 
                 }
 
