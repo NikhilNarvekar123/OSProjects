@@ -288,8 +288,10 @@ public class Project2 {
                     } else {
                         // try or wait to acquire scales, perform task, then release scales
                         scaleResource.acquire();
+                        System.out.println(String.format("Scales in use by postal worker %d", id));
                         Thread.sleep(taskDelayMap.get(CustomerTask.MAIL_PACKAGE));
                         scaleResource.release();
+                        System.out.println(String.format("Scales released by postal worker %d", id));
                     }
 
                     // worker displays it has finished customer task
